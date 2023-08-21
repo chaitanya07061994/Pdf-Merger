@@ -1,0 +1,148 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>PDF Merge Tool</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background-image: url('https://c4.wallpaperflare.com/wallpaper/246/739/689/digital-digital-art-artwork-illustration-abstract-hd-wallpaper-preview.jpg'); /* Add the correct path to your background image here */
+            background-size: cover;
+            background-repeat: no-repeat;
+            background-attachment: fixed;
+            background-position: center center;
+            margin: 0;
+            padding: 0;
+        }
+        .container {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            margin-top: 20px;
+            background-color: rgba(255, 255, 255, 0.8);
+            padding: 20px;
+            border-radius: 10px;
+            box-shadow: 0 0 10px rgba(0, 0, 0, 0.3);
+        }
+         h1 {
+            color: #FF5733; /* Change the color to your preferred color, e.g., red (#FF5733) */
+        }
+        .pdf-input {
+            margin-bottom: 10px;
+        }
+        .pdf-list {
+            list-style: none;
+            padding: 0;
+        }
+        .pdf-list-item {
+            margin-bottom: 10px;
+        }
+        .btn-group {
+            display: flex;
+            flex-direction: row;
+            gap: 10px; /* Adjust the gap as needed */
+            margin-bottom: 10px;
+        }
+        button {
+            background-color: #007bff;
+            color: #fff;
+            border: none;
+            padding: 10px 20px;
+            cursor: pointer;
+            border-radius: 5px;
+            transition: background-color 0.3s ease;
+        }
+        button:hover {
+            background-color: #0056b3;
+        }
+        a {
+            color: #007bff;
+            text-decoration: none;
+            margin-top: 10px;
+        }
+        a:hover {
+            text-decoration: underline;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>PDF Merge Tool</h1>
+        <div class="btn-group">
+            <input type="file" id="pdfFile" class="pdf-input" accept=".pdf" multiple>
+            <button id="addPdfButton">Add PDF</button>
+        </div>
+        <button id="mergeButton">Merge PDFs</button>
+        <ul class="pdf-list" id="pdfList"></ul>
+        <a id="downloadLink" style="display: none;" download="merged.pdf">Download Merged PDF</a>
+    </div>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf-lib/1.10.0/pdf-lib.js"></script>
+   <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            const pdfFileInput = document.getElementById('pdfFile');
+            const addPdfButton = document.getElementById('addPdfButton');
+            const mergeButton = document.getElementById('mergeButton');
+            const pdfList = document.getElementById('pdfList');
+            const downloadLink = document.getElementById('downloadLink');
+            let pdfs = [];
+
+            pdfFileInput.addEventListener('change', () => {
+                pdfs = Array.from(pdfFileInput.files);
+                renderPdfList();
+            });
+
+            addPdfButton.addEventListener('click', () => {
+                const additionalPdfInput = document.createElement('input');
+                additionalPdfInput.type = 'file';
+                additionalPdfInput.accept = '.pdf';
+                additionalPdfInput.className = 'pdf-input';
+                additionalPdfInput.multiple = false;
+
+                additionalPdfInput.addEventListener('change', () => {
+                    const selectedFile = additionalPdfInput.files[0];
+                    if (selectedFile) {
+                        pdfs.push(selectedFile);
+                        renderPdfList();
+                    }
+                });
+
+                additionalPdfInput.click();
+            });
+
+            mergeButton.addEventListener('click', async () => {
+                if (pdfs.length < 2) {
+                    alert('Please select at least two PDF files to merge.');
+                    return;
+                }
+
+                const mergedPdf = await mergePDFs(pdfs);
+                downloadLink.href = URL.createObjectURL(new Blob([await mergedPdf.save()], { type: 'application/pdf' }));
+                downloadLink.style.display = 'block';
+            });
+
+            function renderPdfList() {
+                pdfList.innerHTML = '';
+                pdfs.forEach((pdf, index) => {
+                    const listItem = document.createElement('li');
+                    listItem.className = 'pdf-list-item';
+                    listItem.textContent = `${index + 1}: ${pdf.name}`;
+                    pdfList.appendChild(listItem);
+                });
+            }
+
+            async function mergePDFs(pdfFiles) {
+                const pdfDoc = await PDFLib.PDFDocument.create();
+                for (const pdfFile of pdfFiles) {
+                    const pdfBytes = await fetch(URL.createObjectURL(pdfFile)).then(res => res.arrayBuffer());
+                    const extPdfDoc = await PDFLib.PDFDocument.load(pdfBytes);
+                    const copiedPages = await pdfDoc.copyPages(extPdfDoc, extPdfDoc.getPageIndices());
+                    copiedPages.forEach(page => pdfDoc.addPage(page));
+                }
+                return pdfDoc;
+            }
+        });
+    </script>
+</body>
+</html>
